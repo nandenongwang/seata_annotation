@@ -18,6 +18,7 @@ package io.seata.rm;
 import io.seata.core.rpc.netty.RmNettyRemotingClient;
 
 /**
+ * 创建并初始化资源管理器RPC客户端
  * The Rm client Initiator.
  *
  * @author slievrly

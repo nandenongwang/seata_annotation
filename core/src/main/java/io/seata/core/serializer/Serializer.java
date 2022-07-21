@@ -16,6 +16,7 @@
 package io.seata.core.serializer;
 
 /**
+ * RPC消息序列化器
  * The interface Codec.
  *
  * @author zhangsen

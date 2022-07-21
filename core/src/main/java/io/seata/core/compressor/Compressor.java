@@ -16,12 +16,15 @@
 package io.seata.core.compressor;
 
 /**
+ * 压缩器接口【RPC消息传输】
+ *
  * @author jsbxyyx
  */
 public interface Compressor {
 
     /**
      * compress byte[] to byte[].
+     *
      * @param bytes the bytes
      * @return the byte[]
      */
@@ -29,6 +32,7 @@ public interface Compressor {
 
     /**
      * decompress byte[] to byte[].
+     *
      * @param bytes the bytes
      * @return the byte[]
      */

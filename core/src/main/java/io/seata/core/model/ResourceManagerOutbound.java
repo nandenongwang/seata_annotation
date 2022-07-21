@@ -18,6 +18,7 @@ package io.seata.core.model;
 import io.seata.core.exception.TransactionException;
 
 /**
+ * 上报资源状态接口
  * Resource Manager: send outbound request to TC.
  *
  * @author sharajava

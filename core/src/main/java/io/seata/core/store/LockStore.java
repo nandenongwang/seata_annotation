@@ -15,10 +15,12 @@
  */
 package io.seata.core.store;
 
-import java.util.List;
 import io.seata.core.model.LockStatus;
 
+import java.util.List;
+
 /**
+ * 全局锁存储器接口
  * The interface Lock store.
  *
  * @author zhangsen
@@ -45,8 +47,8 @@ public interface LockStore {
     /**
      * Acquire lock boolean.
      *
-     * @param lockDOs the lock d os
-     * @param autoCommit the auto commit
+     * @param lockDOs       the lock d os
+     * @param autoCommit    the auto commit
      * @param skipCheckLock whether skip check lock or not
      * @return the boolean
      */
@@ -83,9 +85,8 @@ public interface LockStore {
     /**
      * update lock status .
      *
-     * @param xid the xid
+     * @param xid        the xid
      * @param lockStatus the lock status
-     *
      */
     void updateLockStatus(String xid, LockStatus lockStatus);
 

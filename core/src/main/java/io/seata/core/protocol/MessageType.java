@@ -15,12 +15,65 @@
  */
 package io.seata.core.protocol;
 
+import java.lang.reflect.Field;
+import java.util.HashMap;
+import java.util.Map;
+
 /**
+ * 消息类型码
  * The type Message codec type.
  *
  * @author zhangsen
  */
 public interface MessageType {
+
+    static String toName(short type) {
+        Field[] allFields = MessageType.class.getDeclaredFields();
+        String eName = "";
+        for (Field field : allFields) {
+            try {
+                field.setAccessible(true);
+                short t = (short) field.get(field.getName());
+                if (t == type) {
+                    eName = field.getName();
+                }
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+        }
+        Map<String, String> nameMap = new HashMap<>();
+        nameMap.putIfAbsent("TYPE_GLOBAL_BEGIN", "开启全局事务");
+        nameMap.putIfAbsent("TYPE_GLOBAL_BEGIN_RESULT", "开启全局事务结果");
+        nameMap.putIfAbsent("TYPE_GLOBAL_COMMIT", "提交全局事务");
+        nameMap.putIfAbsent("TYPE_GLOBAL_COMMIT_RESULT", "提交全局事务请求结果");
+        nameMap.putIfAbsent("TYPE_GLOBAL_ROLLBACK", "回滚全局事务");
+        nameMap.putIfAbsent("TYPE_GLOBAL_ROLLBACK_RESULT", "回滚全局事务请求结果");
+        nameMap.putIfAbsent("TYPE_GLOBAL_STATUS", "查询全局事务状态");
+        nameMap.putIfAbsent("TYPE_GLOBAL_STATUS_RESULT", "查询全局事务状态结果");
+        nameMap.putIfAbsent("TYPE_GLOBAL_REPORT", "汇报全局事务状态[SAGE]");
+        nameMap.putIfAbsent("TYPE_GLOBAL_REPORT_RESULT", "汇报全局事务状态结果[SAGE]");
+        nameMap.putIfAbsent("TYPE_GLOBAL_LOCK_QUERY", "检查操作数据全局锁");
+        nameMap.putIfAbsent("TYPE_GLOBAL_LOCK_QUERY_RESULT", "检查操作数据全局锁结果");
+        nameMap.putIfAbsent("TYPE_BRANCH_COMMIT", "提交分支事务");
+        nameMap.putIfAbsent("TYPE_BRANCH_COMMIT_RESULT", "提交分支事务结果");
+        nameMap.putIfAbsent("TYPE_BRANCH_ROLLBACK", "回滚分支事务");
+        nameMap.putIfAbsent("TYPE_BRANCH_ROLLBACK_RESULT", "回滚分支事务结果");
+        nameMap.putIfAbsent("TYPE_BRANCH_REGISTER", "分支事务注册");
+        nameMap.putIfAbsent("TYPE_BRANCH_REGISTER_RESULT", "分支事务注册结果");
+        nameMap.putIfAbsent("TYPE_BRANCH_STATUS_REPORT", "汇报分支事务状态[SAGE&XA]");
+        nameMap.putIfAbsent("TYPE_BRANCH_STATUS_REPORT_RESULT", "汇报分支事务状态结果[SAGE&XA]");
+        nameMap.putIfAbsent("TYPE_SEATA_MERGE", "批量请求");
+        nameMap.putIfAbsent("TYPE_SEATA_MERGE_RESULT", "批量请求结果");
+        nameMap.putIfAbsent("TYPE_BATCH_RESULT_MSG", "TYPE_BATCH_RESULT_MSG");
+        nameMap.putIfAbsent("TYPE_REG_CLT", "注册事务管理器");
+        nameMap.putIfAbsent("TYPE_REG_CLT_RESULT", "注册事务管理器结果");
+        nameMap.putIfAbsent("TYPE_REG_RM", "注册资源管理器");
+        nameMap.putIfAbsent("TYPE_REG_RM_RESULT", "注册资源管理器结果");
+        nameMap.putIfAbsent("TYPE_RM_DELETE_UNDOLOG", "清理过期异常undo_log");
+        nameMap.putIfAbsent("TYPE_HEARTBEAT_MSG", "心跳");
+
+        return nameMap.getOrDefault(eName, "未知指令");
+    }
 
     /**
      * The constant TYPE_GLOBAL_BEGIN.

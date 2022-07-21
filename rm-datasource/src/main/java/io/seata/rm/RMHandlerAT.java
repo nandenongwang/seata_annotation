@@ -15,13 +15,6 @@
  */
 package io.seata.rm;
 
-import java.sql.Connection;
-import java.sql.SQLException;
-import java.util.Calendar;
-import java.util.Date;
-import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
-
 import io.seata.core.model.BranchType;
 import io.seata.core.model.ResourceManager;
 import io.seata.core.protocol.transaction.UndoLogDeleteRequest;
@@ -32,7 +25,15 @@ import io.seata.rm.datasource.undo.UndoLogManagerFactory;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.sql.Connection;
+import java.sql.SQLException;
+import java.util.Calendar;
+import java.util.Date;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
+
 /**
+ * AT模式下资源请求指令处理器(依赖undolog表、额外新增了删除指令处理)
  * The type Rm handler at.
  *
  * @author sharajava
@@ -45,10 +46,15 @@ public class RMHandlerAT extends AbstractRMHandler {
 
     private final Map<String, Boolean> undoLogTableExistRecord = new ConcurrentHashMap<>();
 
+    /**
+     * 处理删除过期undolog请求、通过undolog manager
+     *
+     * @param request the request
+     */
     @Override
     public void handle(UndoLogDeleteRequest request) {
         String resourceId = request.getResourceId();
-        DataSourceManager dataSourceManager = (DataSourceManager)getResourceManager();
+        DataSourceManager dataSourceManager = (DataSourceManager) getResourceManager();
         DataSourceProxy dataSourceProxy = dataSourceManager.get(resourceId);
         if (dataSourceProxy == null) {
             LOGGER.warn("Failed to get dataSourceProxy for delete undolog on {}", resourceId);

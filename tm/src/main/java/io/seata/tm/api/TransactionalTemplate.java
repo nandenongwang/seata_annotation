@@ -15,22 +15,20 @@
  */
 package io.seata.tm.api;
 
-import java.util.List;
-
 import io.seata.common.exception.ShouldNeverHappenException;
 import io.seata.core.context.GlobalLockConfigHolder;
 import io.seata.core.exception.TransactionException;
 import io.seata.core.model.GlobalLockConfig;
 import io.seata.core.model.GlobalStatus;
-import io.seata.tm.api.transaction.Propagation;
-import io.seata.tm.api.transaction.SuspendedResourcesHolder;
-import io.seata.tm.api.transaction.TransactionHook;
-import io.seata.tm.api.transaction.TransactionHookManager;
-import io.seata.tm.api.transaction.TransactionInfo;
+import io.seata.tm.api.transaction.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.util.List;
+
 /**
+ * 事务执行模版方法类
+ * 存储与恢复嵌套事务(suspend-resume)、事务调用模版(try-commit-rollback)、调用生命周期钩子
  * Template of executing business logic with a global transaction.
  *
  * @author sharajava
@@ -91,8 +89,8 @@ public class TransactionalTemplate {
                     // If transaction is existing, throw exception.
                     if (existingTransaction(tx)) {
                         throw new TransactionException(
-                            String.format("Existing transaction found for transaction marked with propagation 'never', xid = %s"
-                                    , tx.getXid()));
+                                String.format("Existing transaction found for transaction marked with propagation 'never', xid = %s"
+                                        , tx.getXid()));
                     } else {
                         // Execute without transaction and return.
                         return business.execute();
@@ -149,14 +147,23 @@ public class TransactionalTemplate {
         }
     }
 
+    /**
+     * 全局事务存在
+     */
     private boolean existingTransaction(GlobalTransaction tx) {
         return tx != null;
     }
 
+    /**
+     * 全局事务不存在
+     */
     private boolean notExistingTransaction(GlobalTransaction tx) {
         return tx == null;
     }
 
+    /**
+     * 替换新全局锁配置
+     */
     private GlobalLockConfig replaceGlobalLockConfig(TransactionInfo info) {
         GlobalLockConfig myConfig = new GlobalLockConfig();
         myConfig.setLockRetryInterval(info.getLockRetryInterval());
@@ -164,6 +171,9 @@ public class TransactionalTemplate {
         return GlobalLockConfigHolder.setAndReturnPrevious(myConfig);
     }
 
+    /**
+     * 恢复旧全局锁配置
+     */
     private void resumeGlobalLockConfig(GlobalLockConfig config) {
         if (config != null) {
             GlobalLockConfigHolder.setAndReturnPrevious(config);
@@ -172,6 +182,9 @@ public class TransactionalTemplate {
         }
     }
 
+    /**
+     * 业务代码异常 【抛出异常符合回滚规则->回滚事务、否则提交】
+     */
     private void completeTransactionAfterThrowing(TransactionInfo txInfo, GlobalTransaction tx, Throwable originalException) throws TransactionalExecutor.ExecutionException {
         //roll back
         if (txInfo != null && txInfo.rollbackOn(originalException)) {
@@ -188,6 +201,7 @@ public class TransactionalTemplate {
         }
     }
 
+    //region 提交全局事务、调用前置后置钩子通过全局事务句柄向server提交全局事务
     private void commitTransaction(GlobalTransaction tx) throws TransactionalExecutor.ExecutionException {
         try {
             triggerBeforeCommit();
@@ -196,19 +210,64 @@ public class TransactionalTemplate {
         } catch (TransactionException txe) {
             // 4.1 Failed to commit
             throw new TransactionalExecutor.ExecutionException(tx, txe,
-                TransactionalExecutor.Code.CommitFailure);
+                    TransactionalExecutor.Code.CommitFailure);
         }
     }
 
+    private void triggerBeforeCommit() {
+        for (TransactionHook hook : getCurrentHooks()) {
+            try {
+                hook.beforeCommit();
+            } catch (Exception e) {
+                LOGGER.error("Failed execute beforeCommit in hook {}", e.getMessage(), e);
+            }
+        }
+    }
+
+    private void triggerAfterCommit() {
+        for (TransactionHook hook : getCurrentHooks()) {
+            try {
+                hook.afterCommit();
+            } catch (Exception e) {
+                LOGGER.error("Failed execute afterCommit in hook {}", e.getMessage(), e);
+            }
+        }
+    }
+
+    //endregion
+
+    //region 回滚全局事务、调用前置后置钩子通过全局事务句柄向server回滚全局事务
     private void rollbackTransaction(GlobalTransaction tx, Throwable originalException) throws TransactionException, TransactionalExecutor.ExecutionException {
         triggerBeforeRollback();
         tx.rollback();
         triggerAfterRollback();
         // 3.1 Successfully rolled back
         throw new TransactionalExecutor.ExecutionException(tx, GlobalStatus.RollbackRetrying.equals(tx.getLocalStatus())
-            ? TransactionalExecutor.Code.RollbackRetrying : TransactionalExecutor.Code.RollbackDone, originalException);
+                ? TransactionalExecutor.Code.RollbackRetrying : TransactionalExecutor.Code.RollbackDone, originalException);
     }
 
+    private void triggerBeforeRollback() {
+        for (TransactionHook hook : getCurrentHooks()) {
+            try {
+                hook.beforeRollback();
+            } catch (Exception e) {
+                LOGGER.error("Failed execute beforeRollback in hook {}", e.getMessage(), e);
+            }
+        }
+    }
+
+    private void triggerAfterRollback() {
+        for (TransactionHook hook : getCurrentHooks()) {
+            try {
+                hook.afterRollback();
+            } catch (Exception e) {
+                LOGGER.error("Failed execute afterRollback in hook {}", e.getMessage(), e);
+            }
+        }
+    }
+    //endregion
+
+    //region 开启全局事务、调用前置后置钩子通过全局事务句柄向server开启全局事务
     private void beginTransaction(TransactionInfo txInfo, GlobalTransaction tx) throws TransactionalExecutor.ExecutionException {
         try {
             triggerBeforeBegin();
@@ -216,7 +275,7 @@ public class TransactionalTemplate {
             triggerAfterBegin();
         } catch (TransactionException txe) {
             throw new TransactionalExecutor.ExecutionException(tx, txe,
-                TransactionalExecutor.Code.BeginFailure);
+                    TransactionalExecutor.Code.BeginFailure);
 
         }
     }
@@ -240,46 +299,7 @@ public class TransactionalTemplate {
             }
         }
     }
-
-    private void triggerBeforeRollback() {
-        for (TransactionHook hook : getCurrentHooks()) {
-            try {
-                hook.beforeRollback();
-            } catch (Exception e) {
-                LOGGER.error("Failed execute beforeRollback in hook {}", e.getMessage(), e);
-            }
-        }
-    }
-
-    private void triggerAfterRollback() {
-        for (TransactionHook hook : getCurrentHooks()) {
-            try {
-                hook.afterRollback();
-            } catch (Exception e) {
-                LOGGER.error("Failed execute afterRollback in hook {}", e.getMessage(), e);
-            }
-        }
-    }
-
-    private void triggerBeforeCommit() {
-        for (TransactionHook hook : getCurrentHooks()) {
-            try {
-                hook.beforeCommit();
-            } catch (Exception e) {
-                LOGGER.error("Failed execute beforeCommit in hook {}", e.getMessage(), e);
-            }
-        }
-    }
-
-    private void triggerAfterCommit() {
-        for (TransactionHook hook : getCurrentHooks()) {
-            try {
-                hook.afterCommit();
-            } catch (Exception e) {
-                LOGGER.error("Failed execute afterCommit in hook {}", e.getMessage(), e);
-            }
-        }
-    }
+    //endregion
 
     private void triggerAfterCompletion() {
         for (TransactionHook hook : getCurrentHooks()) {

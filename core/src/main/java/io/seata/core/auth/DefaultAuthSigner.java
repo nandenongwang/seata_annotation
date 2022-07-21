@@ -19,6 +19,7 @@ import io.seata.common.loader.LoadLevel;
 import io.seata.common.util.StringUtils;
 
 /**
+ * 默认签名器实现
  * @author slievrly
  */
 @LoadLevel(name = "defaultAuthSigner", order = 100)

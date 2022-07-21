@@ -18,6 +18,7 @@ package io.seata.core.protocol;
 import java.io.Serializable;
 
 /**
+ * 注册资源管理器请求
  * The type Register rm request.
  *
  * @author slievrly

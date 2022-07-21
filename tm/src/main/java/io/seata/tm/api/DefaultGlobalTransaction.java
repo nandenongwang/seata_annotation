@@ -30,6 +30,7 @@ import static io.seata.common.DefaultValues.DEFAULT_TM_COMMIT_RETRY_COUNT;
 import static io.seata.common.DefaultValues.DEFAULT_TM_ROLLBACK_RETRY_COUNT;
 
 /**
+ * 全局事务【由事务参与者分别持有、发起者可以通过事务管理器发起|提交|回滚事务、参与者仅能向server汇报事务状态等】
  * The type Default global transaction.
  *
  * @author sharajava
@@ -42,19 +43,19 @@ public class DefaultGlobalTransaction implements GlobalTransaction {
 
     private static final String DEFAULT_GLOBAL_TX_NAME = "default";
 
-    private TransactionManager transactionManager;
+    private final TransactionManager transactionManager;
 
     private String xid;
 
     private GlobalStatus status;
 
-    private GlobalTransactionRole role;
+    private final GlobalTransactionRole role;
 
     private static final int COMMIT_RETRY_COUNT = ConfigurationFactory.getInstance().getInt(
-        ConfigurationKeys.CLIENT_TM_COMMIT_RETRY_COUNT, DEFAULT_TM_COMMIT_RETRY_COUNT);
+            ConfigurationKeys.CLIENT_TM_COMMIT_RETRY_COUNT, DEFAULT_TM_COMMIT_RETRY_COUNT);
 
     private static final int ROLLBACK_RETRY_COUNT = ConfigurationFactory.getInstance().getInt(
-        ConfigurationKeys.CLIENT_TM_ROLLBACK_RETRY_COUNT, DEFAULT_TM_ROLLBACK_RETRY_COUNT);
+            ConfigurationKeys.CLIENT_TM_ROLLBACK_RETRY_COUNT, DEFAULT_TM_ROLLBACK_RETRY_COUNT);
 
     /**
      * Instantiates a new Default global transaction.
@@ -87,6 +88,9 @@ public class DefaultGlobalTransaction implements GlobalTransaction {
         begin(timeout, DEFAULT_GLOBAL_TX_NAME);
     }
 
+    /**
+     * 开启事务、通过事务管理器向server开启事务、并将返回的xid绑定到上下文中
+     */
     @Override
     public void begin(int timeout, String name) throws TransactionException {
         if (role != GlobalTransactionRole.Launcher) {
@@ -100,7 +104,7 @@ public class DefaultGlobalTransaction implements GlobalTransaction {
         String currentXid = RootContext.getXID();
         if (currentXid != null) {
             throw new IllegalStateException("Global transaction already exists," +
-                " can't begin a new global transaction, currentXid = " + currentXid);
+                    " can't begin a new global transaction, currentXid = " + currentXid);
         }
         xid = transactionManager.begin(null, null, name, timeout);
         status = GlobalStatus.Begin;
@@ -110,9 +114,13 @@ public class DefaultGlobalTransaction implements GlobalTransaction {
         }
     }
 
+    /**
+     *
+     */
     @SuppressWarnings("lgtm[java/constant-comparison]")
     @Override
     public void commit() throws TransactionException {
+        //region 角色检查、非发起者不能主动提交全局事务
         if (role == GlobalTransactionRole.Participant) {
             // Participant has no responsibility of committing
             if (LOGGER.isDebugEnabled()) {
@@ -120,6 +128,8 @@ public class DefaultGlobalTransaction implements GlobalTransaction {
             }
             return;
         }
+        //endregion
+
         assertXIDNotNull();
         int retry = COMMIT_RETRY_COUNT <= 0 ? DEFAULT_TM_COMMIT_RETRY_COUNT : COMMIT_RETRY_COUNT;
         try {
@@ -145,6 +155,9 @@ public class DefaultGlobalTransaction implements GlobalTransaction {
         }
     }
 
+    /**
+     *
+     */
     @SuppressWarnings("lgtm[java/constant-comparison]")
     @Override
     public void rollback() throws TransactionException {
@@ -181,6 +194,9 @@ public class DefaultGlobalTransaction implements GlobalTransaction {
         }
     }
 
+    /**
+     *
+     */
     @Override
     public SuspendedResourcesHolder suspend() throws TransactionException {
         // In order to associate the following logs with XID, first get and then unbind.
@@ -196,6 +212,9 @@ public class DefaultGlobalTransaction implements GlobalTransaction {
         }
     }
 
+    /**
+     *
+     */
     @Override
     public void resume(SuspendedResourcesHolder suspendedResourcesHolder) throws TransactionException {
         if (suspendedResourcesHolder == null) {
@@ -222,6 +241,9 @@ public class DefaultGlobalTransaction implements GlobalTransaction {
         return xid;
     }
 
+    /**
+     *
+     */
     @Override
     public void globalReport(GlobalStatus globalStatus) throws TransactionException {
         assertXIDNotNull();

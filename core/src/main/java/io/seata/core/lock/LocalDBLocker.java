@@ -15,14 +15,16 @@
  */
 package io.seata.core.lock;
 
-import java.util.List;
 import io.seata.core.model.LockStatus;
+
+import java.util.List;
 
 /**
  * The type Local db locker.
  *
  * @author zhangsen
  */
+@Deprecated
 public class LocalDBLocker extends AbstractLocker {
 
     @Override

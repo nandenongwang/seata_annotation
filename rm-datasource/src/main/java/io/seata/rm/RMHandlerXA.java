@@ -19,6 +19,7 @@ import io.seata.core.model.BranchType;
 import io.seata.core.model.ResourceManager;
 
 /**
+ * XA模式下资源请求指令处理器(无特殊指令处理)
  * The type RM handler XA.
  *
  * @author sharajava

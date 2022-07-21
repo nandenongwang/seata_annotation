@@ -18,6 +18,7 @@ package io.seata.core.constants;
 import io.seata.common.util.StringUtils;
 
 /**
+ * 数据库类型
  * database type
  *
  * @author zhangsen

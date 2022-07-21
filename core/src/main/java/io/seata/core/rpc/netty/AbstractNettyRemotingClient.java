@@ -15,20 +15,6 @@
  */
 package io.seata.core.rpc.netty;
 
-import java.lang.reflect.Field;
-import java.net.InetSocketAddress;
-import java.util.List;
-import java.util.Map;
-import java.util.concurrent.BlockingQueue;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.LinkedBlockingQueue;
-import java.util.concurrent.ThreadLocalRandom;
-import java.util.concurrent.ThreadPoolExecutor;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.TimeoutException;
-import java.util.function.Function;
-
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelDuplexHandler;
 import io.netty.channel.ChannelHandler.Sharable;
@@ -43,13 +29,7 @@ import io.seata.common.thread.NamedThreadFactory;
 import io.seata.common.util.CollectionUtils;
 import io.seata.common.util.NetUtil;
 import io.seata.common.util.StringUtils;
-import io.seata.core.protocol.AbstractMessage;
-import io.seata.core.protocol.HeartbeatMessage;
-import io.seata.core.protocol.MergeMessage;
-import io.seata.core.protocol.MergedWarpMessage;
-import io.seata.core.protocol.MessageFuture;
-import io.seata.core.protocol.ProtocolConstants;
-import io.seata.core.protocol.RpcMessage;
+import io.seata.core.protocol.*;
 import io.seata.core.protocol.transaction.AbstractGlobalEndRequest;
 import io.seata.core.protocol.transaction.BranchRegisterRequest;
 import io.seata.core.protocol.transaction.BranchReportRequest;
@@ -62,6 +42,13 @@ import io.seata.discovery.loadbalance.LoadBalanceFactory;
 import io.seata.discovery.registry.RegistryFactory;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import java.lang.reflect.Field;
+import java.net.InetSocketAddress;
+import java.util.List;
+import java.util.Map;
+import java.util.concurrent.*;
+import java.util.function.Function;
 
 import static io.seata.common.exception.FrameworkErrorCode.NoAvailableService;
 
@@ -101,11 +88,17 @@ public abstract class AbstractNettyRemotingClient extends AbstractNettyRemoting 
     protected final ConcurrentHashMap<String/*serverAddress*/, BlockingQueue<RpcMessage>> basketMap = new ConcurrentHashMap<>();
 
     private final NettyClientBootstrap clientBootstrap;
-    private NettyClientChannelManager clientChannelManager;
+    private final NettyClientChannelManager clientChannelManager;
     private final NettyPoolKey.TransactionRole transactionRole;
     private ExecutorService mergeSendExecutorService;
     private TransactionMessageHandler transactionMessageHandler;
 
+    /**
+     * 初始化channel定时重连任务
+     * 初始化批量发送任务
+     * 初始化父类中请求future超时检测任务
+     * 启动客户端
+     */
     @Override
     public void init() {
         timerExecutor.scheduleAtFixedRate(new Runnable() {
@@ -116,10 +109,10 @@ public abstract class AbstractNettyRemotingClient extends AbstractNettyRemoting 
         }, SCHEDULE_DELAY_MILLS, SCHEDULE_INTERVAL_MILLS, TimeUnit.MILLISECONDS);
         if (this.isEnableClientBatchSendRequest()) {
             mergeSendExecutorService = new ThreadPoolExecutor(MAX_MERGE_SEND_THREAD,
-                MAX_MERGE_SEND_THREAD,
-                KEEP_ALIVE_TIME, TimeUnit.MILLISECONDS,
-                new LinkedBlockingQueue<>(),
-                new NamedThreadFactory(getThreadPrefix(), MAX_MERGE_SEND_THREAD));
+                    MAX_MERGE_SEND_THREAD,
+                    KEEP_ALIVE_TIME, TimeUnit.MILLISECONDS,
+                    new LinkedBlockingQueue<>(),
+                    new NamedThreadFactory(getThreadPrefix(), MAX_MERGE_SEND_THREAD));
             mergeSendExecutorService.submit(new MergedSendRunnable());
         }
         super.init();
@@ -133,15 +126,21 @@ public abstract class AbstractNettyRemotingClient extends AbstractNettyRemoting 
         clientBootstrap = new NettyClientBootstrap(nettyClientConfig, eventExecutorGroup, transactionRole);
         clientBootstrap.setChannelHandlers(new ClientHandler());
         clientChannelManager = new NettyClientChannelManager(
-            new NettyPoolableFactory(this, clientBootstrap), getPoolKeyFunction(), nettyClientConfig);
+                new NettyPoolableFactory(this, clientBootstrap), getPoolKeyFunction(), nettyClientConfig);
     }
 
+    /**
+     * 发送请求
+     */
     @Override
     public Object sendSyncRequest(Object msg) throws TimeoutException {
+        //region 选举目标server并构建RPC消息
         String serverAddress = loadBalance(getTransactionServiceGroup(), msg);
         long timeoutMillis = this.getRpcRequestTimeout();
         RpcMessage rpcMessage = buildRequestMessage(msg, ProtocolConstants.MSGTYPE_RESQUEST_SYNC);
+        //endregion
 
+        //region 开启批量发送时仅写入缓冲、并处理请求future
         // send batch message
         // put message into basketMap, @see MergedSendRunnable
         if (this.isEnableClientBatchSendRequest()) {
@@ -154,7 +153,7 @@ public abstract class AbstractNettyRemotingClient extends AbstractNettyRemoting 
 
             // put message into basketMap
             BlockingQueue<RpcMessage> basket = CollectionUtils.computeIfAbsent(basketMap, serverAddress,
-                key -> new LinkedBlockingQueue<>());
+                    key -> new LinkedBlockingQueue<>());
             if (!basket.offer(rpcMessage)) {
                 LOGGER.error("put message into basketMap offer failed, serverAddress:{},rpcMessage:{}",
                         serverAddress, rpcMessage);
@@ -173,7 +172,7 @@ public abstract class AbstractNettyRemotingClient extends AbstractNettyRemoting 
                 return messageFuture.get(timeoutMillis, TimeUnit.MILLISECONDS);
             } catch (Exception exx) {
                 LOGGER.error("wait response error:{},ip:{},request:{}",
-                    exx.getMessage(), serverAddress, rpcMessage.getBody());
+                        exx.getMessage(), serverAddress, rpcMessage.getBody());
                 if (exx instanceof TimeoutException) {
                     throw (TimeoutException) exx;
                 } else {
@@ -181,13 +180,20 @@ public abstract class AbstractNettyRemotingClient extends AbstractNettyRemoting 
                 }
             }
 
-        } else {
+        }
+        //endregion
+
+        //region 找到目标serverchannel、同步写出请求
+        else {
             Channel channel = clientChannelManager.acquireChannel(serverAddress);
             return super.sendSync(channel, rpcMessage, timeoutMillis);
         }
-
+        //endregion
     }
 
+    /**
+     * 发送请求
+     */
     @Override
     public Object sendSyncRequest(Channel channel, Object msg) throws TimeoutException {
         if (channel == null) {
@@ -198,6 +204,9 @@ public abstract class AbstractNettyRemotingClient extends AbstractNettyRemoting 
         return super.sendSync(channel, rpcMessage, this.getRpcRequestTimeout());
     }
 
+    /**
+     * 发送异步请求
+     */
     @Override
     public void sendAsyncRequest(Channel channel, Object msg) {
         if (channel == null) {
@@ -205,14 +214,17 @@ public abstract class AbstractNettyRemotingClient extends AbstractNettyRemoting 
             return;
         }
         RpcMessage rpcMessage = buildRequestMessage(msg, msg instanceof HeartbeatMessage
-            ? ProtocolConstants.MSGTYPE_HEARTBEAT_REQUEST
-            : ProtocolConstants.MSGTYPE_RESQUEST_ONEWAY);
+                ? ProtocolConstants.MSGTYPE_HEARTBEAT_REQUEST
+                : ProtocolConstants.MSGTYPE_RESQUEST_ONEWAY);
         if (rpcMessage.getBody() instanceof MergeMessage) {
             mergeMsgMap.put(rpcMessage.getId(), (MergeMessage) rpcMessage.getBody());
         }
         super.sendAsync(channel, rpcMessage);
     }
 
+    /**
+     * 发送响应请求
+     */
     @Override
     public void sendAsyncResponse(String serverAddress, RpcMessage rpcMessage, Object msg) {
         RpcMessage rpcMsg = buildResponseMessage(rpcMessage, msg, ProtocolConstants.MSGTYPE_RESPONSE);
@@ -220,6 +232,9 @@ public abstract class AbstractNettyRemotingClient extends AbstractNettyRemoting 
         super.sendAsync(channel, rpcMsg);
     }
 
+    /**
+     * 注册处理器
+     */
     @Override
     public void registerProcessor(int requestCode, RemotingProcessor processor, ExecutorService executor) {
         Pair<RemotingProcessor, ExecutorService> pair = new Pair<>(processor, executor);
@@ -252,6 +267,9 @@ public abstract class AbstractNettyRemotingClient extends AbstractNettyRemoting 
         return clientChannelManager;
     }
 
+    /**
+     * 选取目标server地址
+     */
     protected String loadBalance(String transactionServiceGroup, Object msg) {
         InetSocketAddress address = null;
         try {
@@ -267,6 +285,9 @@ public abstract class AbstractNettyRemotingClient extends AbstractNettyRemoting 
         return NetUtil.toStringAddress(address);
     }
 
+    /**
+     * 根据xid从同组server候选地址中选择server地址
+     */
     protected InetSocketAddress doSelect(List<InetSocketAddress> list, Object msg) throws Exception {
         if (CollectionUtils.isNotEmpty(list)) {
             if (list.size() > 1) {
@@ -278,6 +299,9 @@ public abstract class AbstractNettyRemotingClient extends AbstractNettyRemoting 
         return null;
     }
 
+    /**
+     * 提取消息中xid
+     */
     protected String getXid(Object msg) {
         String xid = "";
         if (msg instanceof AbstractGlobalEndRequest) {
@@ -298,6 +322,9 @@ public abstract class AbstractNettyRemotingClient extends AbstractNettyRemoting 
         return StringUtils.isBlank(xid) ? String.valueOf(ThreadLocalRandom.current().nextLong(Long.MAX_VALUE)) : xid;
     }
 
+    /**
+     * 获取批量发送线程线程名
+     */
     private String getThreadPrefix() {
         return AbstractNettyRemotingClient.MERGE_THREAD_PREFIX + THREAD_PREFIX_SPLIT_CHAR + transactionRole.name();
     }
@@ -310,6 +337,7 @@ public abstract class AbstractNettyRemotingClient extends AbstractNettyRemoting 
     protected abstract Function<String, NettyPoolKey> getPoolKeyFunction();
 
     /**
+     * 获取客户端所属事务组
      * Get transaction service group.
      *
      * @return transaction service group
@@ -317,6 +345,7 @@ public abstract class AbstractNettyRemotingClient extends AbstractNettyRemoting 
     protected abstract String getTransactionServiceGroup();
 
     /**
+     * 是否开启批量发送功能
      * Whether to enable batch sending of requests, hand over to subclass implementation.
      *
      * @return true:enable, false:disable
@@ -324,6 +353,7 @@ public abstract class AbstractNettyRemotingClient extends AbstractNettyRemoting 
     protected abstract boolean isEnableClientBatchSendRequest();
 
     /**
+     * 获取rpc请求超时时间
      * get Rpc Request Timeout
      *
      * @return the Rpc Request Timeout
@@ -331,6 +361,7 @@ public abstract class AbstractNettyRemotingClient extends AbstractNettyRemoting 
     protected abstract long getRpcRequestTimeout();
 
     /**
+     * 批量消息发送线程、合并同一目标的消息批量发送
      * The type Merged send runnable.
      */
     private class MergedSendRunnable implements Runnable {
@@ -404,6 +435,7 @@ public abstract class AbstractNettyRemotingClient extends AbstractNettyRemoting 
     }
 
     /**
+     * 客户端netty handler【转发收到的请求给处理器】
      * The type ClientHandler.
      */
     @Sharable
@@ -472,7 +504,7 @@ public abstract class AbstractNettyRemotingClient extends AbstractNettyRemoting 
         @Override
         public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
             LOGGER.error(FrameworkErrorCode.ExceptionCaught.getErrCode(),
-                NetUtil.toStringAddress(ctx.channel().remoteAddress()) + "connect exception. " + cause.getMessage(), cause);
+                    NetUtil.toStringAddress(ctx.channel().remoteAddress()) + "connect exception. " + cause.getMessage(), cause);
             clientChannelManager.releaseChannel(ctx.channel(), getAddressFromChannel(ctx.channel()));
             if (LOGGER.isInfoEnabled()) {
                 LOGGER.info("remove exception rm channel:{}", ctx.channel());
@@ -488,5 +520,4 @@ public abstract class AbstractNettyRemotingClient extends AbstractNettyRemoting 
             super.close(ctx, future);
         }
     }
-
 }

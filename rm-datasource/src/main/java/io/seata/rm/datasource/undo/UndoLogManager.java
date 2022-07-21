@@ -15,16 +15,18 @@
  */
 package io.seata.rm.datasource.undo;
 
+import io.seata.core.exception.TransactionException;
+import io.seata.rm.datasource.ConnectionProxy;
+import io.seata.rm.datasource.DataSourceProxy;
+
 import java.sql.Connection;
 import java.sql.SQLException;
 import java.util.Date;
 import java.util.Set;
 
-import io.seata.core.exception.TransactionException;
-import io.seata.rm.datasource.ConnectionProxy;
-import io.seata.rm.datasource.DataSourceProxy;
-
 /**
+ * undolog管理器
+ * <p>
  * The type Undo log manager.
  *
  * @author sharajava
@@ -33,13 +35,16 @@ import io.seata.rm.datasource.DataSourceProxy;
 public interface UndoLogManager {
 
     /**
+     * 刷新缓存到数据库
      * Flush undo logs.
+     *
      * @param cp the cp
      * @throws SQLException the sql exception
      */
     void flushUndoLogs(ConnectionProxy cp) throws SQLException;
 
     /**
+     * 应用undo记录(回滚)
      * Undo.
      *
      * @param dataSourceProxy the data source proxy
@@ -50,6 +55,7 @@ public interface UndoLogManager {
     void undo(DataSourceProxy dataSourceProxy, String xid, long branchId) throws TransactionException;
 
     /**
+     * 删除undo记录(提交事务)
      * Delete undo log.
      *
      * @param xid      the xid
@@ -60,27 +66,32 @@ public interface UndoLogManager {
     void deleteUndoLog(String xid, long branchId, Connection conn) throws SQLException;
 
     /**
+     * 批量删除undo记录
      * batch Delete undo log.
      *
-     * @param xids the xid set collections
+     * @param xids      the xid set collections
      * @param branchIds the branch id set collections
-     * @param conn the connection
+     * @param conn      the connection
      * @throws SQLException the sql exception
      */
     void batchDeleteUndoLog(Set<String> xids, Set<Long> branchIds, Connection conn) throws SQLException;
 
     /**
+     * 删除指定时间前的undo记录
      * delete undolog by created
+     *
      * @param logCreated the created time
-     * @param limitRows the limit rows
-     * @param conn the connection
+     * @param limitRows  the limit rows
+     * @param conn       the connection
      * @return the update rows
      * @throws SQLException the sql exception
      */
     int deleteUndoLogByLogCreated(Date logCreated, int limitRows, Connection conn) throws SQLException;
 
     /**
+     * 检查是否存在undo表
      * does this resource have undolog table?(some may not have, if they don't use AT mode at all)
+     *
      * @param conn connection of the resource
      * @return whether undolog table exist or not
      */

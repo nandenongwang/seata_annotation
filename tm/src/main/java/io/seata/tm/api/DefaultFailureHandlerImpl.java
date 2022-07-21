@@ -15,8 +15,6 @@
  */
 package io.seata.tm.api;
 
-import java.util.concurrent.TimeUnit;
-
 import io.netty.util.HashedWheelTimer;
 import io.netty.util.Timeout;
 import io.netty.util.TimerTask;
@@ -27,7 +25,11 @@ import io.seata.core.model.GlobalStatus;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.util.concurrent.TimeUnit;
+
 /**
+ * 默认全局事务异常处理器【处理全局事务[开始|提交|回滚|回滚重试]失败等错误】
+ * 向server查询事务状态、打印警告日志、直到达到预期状态或超出查询次数限制为止
  * The type Default failure handler.
  *
  * @author slievrly
@@ -48,8 +50,8 @@ public class DefaultFailureHandlerImpl implements FailureHandler {
     private static final int TICKS_PER_WHEEL = 8;
 
     private HashedWheelTimer timer = new HashedWheelTimer(
-        new NamedThreadFactory("failedTransactionRetry", 1),
-        TICK_DURATION, TimeUnit.SECONDS, TICKS_PER_WHEEL);
+            new NamedThreadFactory("failedTransactionRetry", 1),
+            TICK_DURATION, TimeUnit.SECONDS, TICKS_PER_WHEEL);
 
     @Override
     public void onBeginFailure(GlobalTransaction tx, Throwable cause) {
@@ -70,9 +72,9 @@ public class DefaultFailureHandlerImpl implements FailureHandler {
 
     @Override
     public void onRollbackRetrying(GlobalTransaction tx, Throwable originalException) {
-        StackTraceLogger.warn(LOGGER, originalException, "Retrying to rollback transaction[{}]", new String[] {tx.getXid()});
+        StackTraceLogger.warn(LOGGER, originalException, "Retrying to rollback transaction[{}]", new String[]{tx.getXid()});
         timer.newTimeout(new CheckTimerTask(tx, GlobalStatus.RollbackRetrying), SCHEDULE_INTERVAL_SECONDS,
-            TimeUnit.SECONDS);
+                TimeUnit.SECONDS);
     }
 
     protected class CheckTimerTask implements TimerTask {

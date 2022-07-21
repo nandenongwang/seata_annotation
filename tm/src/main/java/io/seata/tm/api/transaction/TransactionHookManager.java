@@ -20,6 +20,7 @@ import java.util.Collections;
 import java.util.List;
 
 /**
+ * 全局事务生命周期钩子管理组件
  * @author guoyao
  */
 public final class TransactionHookManager {

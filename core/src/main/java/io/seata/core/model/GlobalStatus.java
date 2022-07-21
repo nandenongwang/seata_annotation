@@ -17,6 +17,7 @@ package io.seata.core.model;
 
 
 /**
+ * 全局事务状态
  * Status of global transaction.
  *
  * @author sharajava

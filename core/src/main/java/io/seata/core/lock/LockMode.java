@@ -16,6 +16,7 @@
 package io.seata.core.lock;
 
 /**
+ * 锁模式、默认锁存储在server端
  * lock mode
  *
  * @author zhangsen

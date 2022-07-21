@@ -15,8 +15,6 @@
  */
 package io.seata.core.rpc.netty;
 
-import java.net.InetSocketAddress;
-
 import io.netty.channel.Channel;
 import io.seata.common.exception.FrameworkException;
 import io.seata.common.util.NetUtil;
@@ -26,7 +24,10 @@ import org.apache.commons.pool.KeyedPoolableObjectFactory;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.net.InetSocketAddress;
+
 /**
+ * 用于创建客户端与server的连接channel、并立即发送对应注册资源|事务管理器请求(附加到缓存key上)
  * The type Netty key poolable factory.
  *
  * @author slievrly
@@ -75,12 +76,12 @@ public class NettyPoolableFactory implements KeyedPoolableObjectFactory<NettyPoo
                 tmpChannel.close();
             }
             throw new FrameworkException(
-                "register " + key.getTransactionRole().name() + " error, errMsg:" + exx.getMessage());
+                    "register " + key.getTransactionRole().name() + " error, errMsg:" + exx.getMessage());
         }
         if (LOGGER.isInfoEnabled()) {
             LOGGER.info("register success, cost " + (System.currentTimeMillis() - start) + " ms, version:" + getVersion(
-                response, key.getTransactionRole()) + ",role:" + key.getTransactionRole().name() + ",channel:"
-                + channelToServer);
+                    response, key.getTransactionRole()) + ",role:" + key.getTransactionRole().name() + ",channel:"
+                    + channelToServer);
         }
         return channelToServer;
     }
@@ -93,13 +94,13 @@ public class NettyPoolableFactory implements KeyedPoolableObjectFactory<NettyPoo
             if (!(response instanceof RegisterTMResponse)) {
                 return false;
             }
-            RegisterTMResponse registerTMResponse = (RegisterTMResponse)response;
+            RegisterTMResponse registerTMResponse = (RegisterTMResponse) response;
             return registerTMResponse.isIdentified();
         } else if (transactionRole.equals(NettyPoolKey.TransactionRole.RMROLE)) {
             if (!(response instanceof RegisterRMResponse)) {
                 return false;
             }
-            RegisterRMResponse registerRMResponse = (RegisterRMResponse)response;
+            RegisterRMResponse registerRMResponse = (RegisterRMResponse) response;
             return registerRMResponse.isIdentified();
         }
         return false;

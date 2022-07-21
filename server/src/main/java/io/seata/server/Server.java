@@ -15,10 +15,6 @@
  */
 package io.seata.server;
 
-import java.util.concurrent.LinkedBlockingQueue;
-import java.util.concurrent.ThreadPoolExecutor;
-import java.util.concurrent.TimeUnit;
-
 import io.seata.common.XID;
 import io.seata.common.thread.NamedThreadFactory;
 import io.seata.common.util.NetUtil;
@@ -33,6 +29,10 @@ import io.seata.server.metrics.MetricsManager;
 import io.seata.server.session.SessionHolder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.ThreadPoolExecutor;
+import java.util.concurrent.TimeUnit;
 
 import static io.seata.spring.boot.autoconfigure.StarterConstants.REGEX_SPLIT_CHAR;
 import static io.seata.spring.boot.autoconfigure.StarterConstants.REGISTRY_PREFERED_NETWORKS;
@@ -52,22 +52,30 @@ public class Server {
         // create logger
         final Logger logger = LoggerFactory.getLogger(Server.class);
 
+        //region 解析命令行参数
         //initialize the parameter parser
         //Note that the parameter parser should always be the first line to execute.
         //Because, here we need to parse the parameters needed for startup.
         ParameterParser parameterParser = new ParameterParser(args);
+        //endregion
 
+        //region 初始化度量组件
         //initialize the metrics
         MetricsManager.get().init();
+        //endregion
 
         System.setProperty(ConfigurationKeys.STORE_MODE, parameterParser.getStoreMode());
 
+        //region 创建netty server
         ThreadPoolExecutor workingThreads = new ThreadPoolExecutor(NettyServerConfig.getMinServerPoolSize(),
                 NettyServerConfig.getMaxServerPoolSize(), NettyServerConfig.getKeepAliveTime(), TimeUnit.SECONDS,
                 new LinkedBlockingQueue<>(NettyServerConfig.getMaxTaskQueueSize()),
                 new NamedThreadFactory("ServerHandlerThread", NettyServerConfig.getMaxServerPoolSize()), new ThreadPoolExecutor.CallerRunsPolicy());
 
         NettyRemotingServer nettyRemotingServer = new NettyRemotingServer(workingThreads);
+        //endregion
+
+        //region 根据server node ID设置ID生成器的机器ID、初始化session管理组件、初始化全局锁管理组件、初始化事务协调器并注册成server入栈请求处理器
         UUIDGenerator.init(parameterParser.getServerNode());
         //log store mode : file, db, redis
         SessionHolder.init(parameterParser.getSessionStoreMode());
@@ -75,10 +83,14 @@ public class Server {
         DefaultCoordinator coordinator = DefaultCoordinator.getInstance(nettyRemotingServer);
         coordinator.init();
         nettyRemotingServer.setHandler(coordinator);
+        //endregion
 
+        //region 设置server关闭钩子【默认使用事务协调器、为通知其进行收尾工作】
         // let ServerRunner do destroy instead ShutdownHook, see https://github.com/seata/seata/issues/4028
         ServerRunner.addDisposable(coordinator);
+        //endregion
 
+        //region 设置XID生成需要的server ip地址
         //127.0.0.1 and 0.0.0.0 are not valid here.
         if (NetUtil.isValidIp(parameterParser.getHost(), false)) {
             XID.setIpAddress(parameterParser.getHost());
@@ -90,6 +102,10 @@ public class Server {
                 XID.setIpAddress(NetUtil.getLocalIp());
             }
         }
+        //endregion
+
+        //region 初始化并启动netty server开始对外服务
         nettyRemotingServer.init();
+        //endregion
     }
 }

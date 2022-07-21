@@ -19,6 +19,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
+ * 批量结果消息
  * The type batch result message.
  *
  * @author zhangchenghui.dev@gmail.com

@@ -16,6 +16,8 @@
 package io.seata.tm.api;
 
 /**
+ * 全局事务角色
+ * 发起者或者参与者
  * Role of current thread involve in a global transaction.
  *
  * @author sharajava

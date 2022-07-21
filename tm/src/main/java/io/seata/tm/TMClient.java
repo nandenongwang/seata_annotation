@@ -18,6 +18,7 @@ package io.seata.tm;
 import io.seata.core.rpc.netty.TmNettyRemotingClient;
 
 /**
+ * 初始化事务管理器RPC客户端
  * The type Tm client.
  *
  * @author slievrly

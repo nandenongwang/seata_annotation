@@ -18,6 +18,7 @@ package io.seata.core.model;
 import io.seata.core.exception.TransactionException;
 
 /**
+ * 事务管理器
  * Transaction Manager.
  *
  * Define a global transaction and control it.

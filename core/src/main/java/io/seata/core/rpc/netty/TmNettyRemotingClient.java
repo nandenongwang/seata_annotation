@@ -48,6 +48,8 @@ import static io.seata.core.constants.ConfigurationKeys.SEATA_ACCESS_KEY;
 import static io.seata.core.constants.ConfigurationKeys.SEATA_SECRET_KEY;
 
 /**
+ * 事务管理器RPC客户端
+ * 注册相关处理器、实例化、注册指令回调等
  * The rm netty client.
  *
  * @author slievrly

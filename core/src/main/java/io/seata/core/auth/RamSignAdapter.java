@@ -28,24 +28,25 @@ import java.time.ZoneOffset;
 import java.time.format.DateTimeFormatter;
 
 /**
+ * 阿里ram账户签名适配
  * adapt ram sign interface
  *
  * @author onlinechild
  */
 public class RamSignAdapter {
-    
+
     private static final String SHA256_ENCRYPT = "HmacSHA256";
-    
+
     private static final String PREFIX = "aliyun_v4";
-    
+
     private static final String CONSTANT = "aliyun_v4_request";
-    
+
     private static final String DEFAULT_REGION = "cn-beijing";
-    
+
     private static final String DEFAULT_PRODCUT_CODE = "seata";
-    
+
     private static final DateTimeFormatter DTF = DateTimeFormatter.ofPattern("yyyyMMdd");
-    
+
     /**
      * get date level signing key
      *
@@ -65,7 +66,7 @@ public class RamSignAdapter {
             throw new RuntimeException("InvalidKey");
         }
     }
-    
+
     /**
      * get date&region level signing key
      *
@@ -87,7 +88,7 @@ public class RamSignAdapter {
             throw new RuntimeException("InvalidKey");
         }
     }
-    
+
     /**
      * get date&region&product level signing key
      *
@@ -113,7 +114,7 @@ public class RamSignAdapter {
             throw new RuntimeException("InvalidKey");
         }
     }
-    
+
     /**
      * get ram sign Sign with hmac SHA1 encrtpt
      *
@@ -141,5 +142,5 @@ public class RamSignAdapter {
             throw new RuntimeException("get ram sign with hmacSHA1Encrypt fail", e);
         }
     }
-    
+
 }

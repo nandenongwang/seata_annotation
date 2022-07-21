@@ -18,6 +18,7 @@ package io.seata.core.lock;
 import io.seata.common.util.StringUtils;
 
 /**
+ * 行锁
  * The type Row lock.
  *
  * @author zhangsen

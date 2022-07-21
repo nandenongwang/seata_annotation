@@ -18,6 +18,7 @@ package io.seata.core.protocol;
 import java.io.Serializable;
 
 /**
+ * 注册事务管理器响应
  * The type Register tm response.
  *
  * @author slievrly

@@ -19,6 +19,7 @@ package io.seata.core.store;
 import java.util.List;
 
 /**
+ * 事务日志(数据库下为undolog)存储器接口
  * the transaction log store
  *
  * @author zhangsen

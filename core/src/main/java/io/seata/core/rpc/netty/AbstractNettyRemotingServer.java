@@ -15,15 +15,7 @@
  */
 package io.seata.core.rpc.netty;
 
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.ThreadPoolExecutor;
-import java.util.concurrent.TimeoutException;
-
-import io.netty.channel.Channel;
-import io.netty.channel.ChannelDuplexHandler;
-import io.netty.channel.ChannelHandler;
-import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelPromise;
+import io.netty.channel.*;
 import io.netty.handler.codec.DecoderException;
 import io.netty.handler.timeout.IdleState;
 import io.netty.handler.timeout.IdleStateEvent;
@@ -38,7 +30,12 @@ import io.seata.core.rpc.processor.RemotingProcessor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.ThreadPoolExecutor;
+import java.util.concurrent.TimeoutException;
+
 /**
+ * 启动netty server 、发送请求命令、发送响应命令、转发请求给处理器等
  * The type abstract remoting server.
  *
  * @author zhangchenghui.dev@gmail.com
@@ -98,8 +95,8 @@ public abstract class AbstractNettyRemotingServer extends AbstractNettyRemoting 
         }
         if (clientChannel != null) {
             RpcMessage rpcMsg = buildResponseMessage(rpcMessage, msg, msg instanceof HeartbeatMessage
-                ? ProtocolConstants.MSGTYPE_HEARTBEAT_RESPONSE
-                : ProtocolConstants.MSGTYPE_RESPONSE);
+                    ? ProtocolConstants.MSGTYPE_HEARTBEAT_RESPONSE
+                    : ProtocolConstants.MSGTYPE_RESPONSE);
             super.sendAsync(clientChannel, rpcMsg);
         } else {
             throw new RuntimeException("channel is error.");
@@ -130,7 +127,7 @@ public abstract class AbstractNettyRemotingServer extends AbstractNettyRemoting 
     /**
      * Debug log.
      *
-     * @param format the info
+     * @param format    the info
      * @param arguments the arguments
      */
     protected void debugLog(String format, Object... arguments) {

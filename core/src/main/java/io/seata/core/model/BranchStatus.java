@@ -19,6 +19,7 @@ package io.seata.core.model;
 import io.seata.common.exception.ShouldNeverHappenException;
 
 /**
+ * 分支事务状态
  * Status of branch transaction.
  *
  * @author sharajava

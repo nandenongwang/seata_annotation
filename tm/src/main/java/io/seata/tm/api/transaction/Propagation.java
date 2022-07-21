@@ -18,6 +18,7 @@ package io.seata.tm.api.transaction;
 import io.seata.tm.api.TransactionalExecutor;
 
 /**
+ * 全局事务传播属性
  * Propagation level of global transactions.
  *
  * @author haozhibei

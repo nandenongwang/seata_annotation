@@ -16,6 +16,8 @@
 package io.seata.tm.api.transaction;
 
 /**
+ * 全局事务生命周期钩子
+ *
  * @author guoyao
  */
 public interface TransactionHook {

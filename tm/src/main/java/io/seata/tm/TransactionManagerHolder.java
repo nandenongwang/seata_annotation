@@ -22,6 +22,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
+ * spi加载单例事务管理器
  * The type Default transaction manager.
  *
  * @author sharajava

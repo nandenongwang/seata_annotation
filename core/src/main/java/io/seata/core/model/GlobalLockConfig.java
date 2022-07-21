@@ -16,6 +16,7 @@
 package io.seata.core.model;
 
 /**
+ * 全局锁配置
  * @author selfishlover
  */
 public class GlobalLockConfig {

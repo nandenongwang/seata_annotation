@@ -15,14 +15,18 @@
  */
 package io.seata.rm.datasource;
 
+import io.seata.rm.datasource.sql.struct.Field;
+
 import java.sql.PreparedStatement;
 import java.sql.SQLException;
 import java.util.List;
 import java.util.Map;
 
-import io.seata.rm.datasource.sql.struct.Field;
-
 /**
+ * sql工具类
+ * 1、拼接如  field1 = ？and field2 = ? and field3 = ? 语句
+ * 2、拼接如  (field1,[field2]) in ((?,[?]),(?,[?]))语句
+ * 3、为PreparedStatement设置参数值
  * generate sql and set value to sql
  *
  * @author JerryYin
@@ -36,10 +40,11 @@ public class SqlGenerateUtils {
     }
 
     public static String buildWhereConditionByPKs(List<String> pkNameList, int rowSize, String dbType)
-        throws SQLException {
+            throws SQLException {
         return buildWhereConditionByPKs(pkNameList, rowSize, dbType, MAX_IN_SIZE);
 
     }
+
     /**
      * each pk is a condition.the result will like :" (id,userCode) in ((?,?),(?,?)) or (id,userCode) in ((?,?),(?,?)
      * ) or (id,userCode) in ((?,?))"
@@ -53,7 +58,7 @@ public class SqlGenerateUtils {
      * @throws SQLException the sql exception
      */
     public static String buildWhereConditionByPKs(List<String> pkNameList, int rowSize, String dbType, int maxInSize)
-        throws SQLException {
+            throws SQLException {
         StringBuilder whereStr = new StringBuilder();
         //we must consider the situation of composite primary key
         int batchSize = rowSize % maxInSize == 0 ? rowSize / maxInSize : (rowSize / maxInSize) + 1;
@@ -71,7 +76,7 @@ public class SqlGenerateUtils {
             whereStr.append(") in ( ");
 
             int eachSize = (batch == batchSize - 1) ? (rowSize % maxInSize == 0 ? maxInSize : rowSize % maxInSize)
-                : maxInSize;
+                    : maxInSize;
             for (int i = 0; i < eachSize; i++) {
                 //each row is a bracket
                 if (i > 0) {
@@ -95,9 +100,9 @@ public class SqlGenerateUtils {
     /**
      * set parameter for PreparedStatement, this is only used in pk sql.
      *
-     * @param pkRowsList pkRowsList
+     * @param pkRowsList       pkRowsList
      * @param pkColumnNameList pkColumnNameList
-     * @param pst preparedStatement
+     * @param pst              preparedStatement
      * @throws SQLException SQLException
      */
     public static void setParamForPk(List<Map<String, Field>> pkRowsList, List<String> pkColumnNameList,
@@ -117,7 +122,7 @@ public class SqlGenerateUtils {
      * each pk is a condition.the result will like :" id =? and userCode =?"
      *
      * @param pkNameList pkNameList
-     * @param dbType dbType
+     * @param dbType     dbType
      * @return return where condition sql string.the sql can just search one related record.
      */
     public static String buildWhereConditionByPKs(List<String> pkNameList, String dbType) {

@@ -17,6 +17,7 @@ package io.seata.core.protocol;
 
 
 /**
+ * 批量消息结果
  * The type Merge result message.
  *
  * @author slievrly

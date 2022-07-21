@@ -19,6 +19,7 @@ package io.seata.core.model;
 import io.seata.common.exception.ShouldNeverHappenException;
 
 /**
+ * 全局锁状态
  * Status of lock.
  *
  * @author funkye

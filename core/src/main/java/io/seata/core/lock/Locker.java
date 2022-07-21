@@ -19,6 +19,7 @@ import java.util.List;
 import io.seata.core.model.LockStatus;
 
 /**
+ *
  * The interface Locker.
  */
 public interface Locker {

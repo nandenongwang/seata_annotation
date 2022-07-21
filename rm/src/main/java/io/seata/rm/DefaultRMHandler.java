@@ -21,11 +21,7 @@ import io.seata.common.util.CollectionUtils;
 import io.seata.core.context.RootContext;
 import io.seata.core.model.BranchType;
 import io.seata.core.model.ResourceManager;
-import io.seata.core.protocol.transaction.BranchCommitRequest;
-import io.seata.core.protocol.transaction.BranchCommitResponse;
-import io.seata.core.protocol.transaction.BranchRollbackRequest;
-import io.seata.core.protocol.transaction.BranchRollbackResponse;
-import io.seata.core.protocol.transaction.UndoLogDeleteRequest;
+import io.seata.core.protocol.transaction.*;
 import org.slf4j.MDC;
 
 import java.util.List;
@@ -33,12 +29,16 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
+ * 根据分支事务类型找到对应处理器委托处理
  * the default RM event handler implement, deal with the phase two events
  *
  * @author zhangsen
  */
 public class DefaultRMHandler extends AbstractRMHandler {
 
+    /**
+     * 不同类型事务资源请求处理器
+     */
     protected static Map<BranchType, AbstractRMHandler> allRMHandlersMap = new ConcurrentHashMap<>();
 
     protected DefaultRMHandler() {

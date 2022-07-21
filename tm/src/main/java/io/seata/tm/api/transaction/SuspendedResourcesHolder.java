@@ -18,6 +18,7 @@ package io.seata.tm.api.transaction;
 import javax.annotation.Nonnull;
 
 /**
+ * 存储挂起的嵌套事务
  * Holder for suspended resources to support propagation or nested logic.
  * Used by {@code suspend} and {@code resume}
  *

@@ -18,6 +18,7 @@ package io.seata.core.model;
 import io.seata.core.exception.TransactionException;
 
 /**
+ * 控制资源接口
  * Resource Manager.
  *
  * Control a branch transaction commit or rollback.

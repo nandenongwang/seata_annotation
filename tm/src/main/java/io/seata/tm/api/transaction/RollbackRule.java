@@ -20,6 +20,9 @@ import io.seata.common.util.StringUtils;
 import java.io.Serializable;
 
 /**
+ * 回滚规则
+ * 封装@GlobalTransactional注解上配置的回滚异常class&name
+ *
  * @author guoyao
  */
 public class RollbackRule implements Serializable {

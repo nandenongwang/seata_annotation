@@ -20,7 +20,10 @@ import io.seata.core.context.RootContext;
 import io.seata.core.model.GlobalLockConfig;
 
 /**
+ * 手动全局锁业务执行模版
+ * 绑定与解除全局锁标识、更新与重置全局锁配置
  * executor template for local transaction which need global lock
+ *
  * @author selfishlover
  */
 public class GlobalLockTemplate {

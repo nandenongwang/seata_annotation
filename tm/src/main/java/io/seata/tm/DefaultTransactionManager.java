@@ -21,23 +21,14 @@ import io.seata.core.exception.TransactionExceptionCode;
 import io.seata.core.model.GlobalStatus;
 import io.seata.core.model.TransactionManager;
 import io.seata.core.protocol.ResultCode;
-import io.seata.core.protocol.transaction.AbstractTransactionRequest;
-import io.seata.core.protocol.transaction.AbstractTransactionResponse;
-import io.seata.core.protocol.transaction.GlobalBeginRequest;
-import io.seata.core.protocol.transaction.GlobalBeginResponse;
-import io.seata.core.protocol.transaction.GlobalCommitRequest;
-import io.seata.core.protocol.transaction.GlobalCommitResponse;
-import io.seata.core.protocol.transaction.GlobalReportRequest;
-import io.seata.core.protocol.transaction.GlobalReportResponse;
-import io.seata.core.protocol.transaction.GlobalRollbackRequest;
-import io.seata.core.protocol.transaction.GlobalRollbackResponse;
-import io.seata.core.protocol.transaction.GlobalStatusRequest;
-import io.seata.core.protocol.transaction.GlobalStatusResponse;
+import io.seata.core.protocol.transaction.*;
 import io.seata.core.rpc.netty.TmNettyRemotingClient;
 
 import java.util.concurrent.TimeoutException;
 
 /**
+ * 默认事务管理器
+ * 用于事务发起者向server(coordinator)【开启|提交|回滚|查询】全局事务
  * The type Default transaction manager.
  *
  * @author sharajava
@@ -46,7 +37,7 @@ public class DefaultTransactionManager implements TransactionManager {
 
     @Override
     public String begin(String applicationId, String transactionServiceGroup, String name, int timeout)
-        throws TransactionException {
+            throws TransactionException {
         GlobalBeginRequest request = new GlobalBeginRequest();
         request.setTransactionName(name);
         request.setTimeout(timeout);

@@ -27,6 +27,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
+ * 消息总线、现仅用于事务自检降级
  * Default event bus implement with Guava EventBus.
  *
  * @author zhengyangyong

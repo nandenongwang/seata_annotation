@@ -18,6 +18,7 @@ package io.seata.core.model;
 import java.util.Map;
 
 /**
+ * 资源管理器
  * Resource Manager: common behaviors.
  *
  * @author sharajava

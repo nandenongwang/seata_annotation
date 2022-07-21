@@ -18,6 +18,7 @@ package io.seata.core.rpc.hook;
 import io.seata.core.protocol.RpcMessage;
 
 /**
+ * rpc钩子
  * @author ph3636
  */
 public interface RpcHook {

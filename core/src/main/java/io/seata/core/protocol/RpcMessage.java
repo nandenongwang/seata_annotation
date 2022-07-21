@@ -21,6 +21,7 @@ import java.util.HashMap;
 import java.util.Map;
 
 /**
+ * RPC消息包装
  * The type Rpc message.
  *
  * @author slievrly

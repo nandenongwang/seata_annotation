@@ -15,22 +15,6 @@
  */
 package io.seata.core.rpc.netty;
 
-import java.net.InetSocketAddress;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
-import java.util.Set;
-import java.util.HashSet;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ConcurrentMap;
-import java.util.function.Function;
-import java.util.stream.Collectors;
-
-import io.seata.core.protocol.RegisterTMRequest;
-import org.apache.commons.pool.impl.GenericKeyedObjectPool;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import io.netty.channel.Channel;
 import io.seata.common.exception.FrameworkErrorCode;
 import io.seata.common.exception.FrameworkException;
@@ -39,11 +23,23 @@ import io.seata.common.util.NetUtil;
 import io.seata.common.util.StringUtils;
 import io.seata.core.constants.ConfigurationKeys;
 import io.seata.core.protocol.RegisterRMRequest;
+import io.seata.core.protocol.RegisterTMRequest;
 import io.seata.discovery.registry.FileRegistryServiceImpl;
 import io.seata.discovery.registry.RegistryFactory;
 import io.seata.discovery.registry.RegistryService;
+import org.apache.commons.pool.impl.GenericKeyedObjectPool;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import java.net.InetSocketAddress;
+import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 
 /**
+ * 管理与server连接channel
  * Netty client pool manager.
  *
  * @author slievrly
@@ -53,18 +49,33 @@ class NettyClientChannelManager {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(NettyClientChannelManager.class);
 
+    /**
+     * 防止同地址channel多线程下被重复申请或释放
+     */
     private final ConcurrentMap<String, Object> channelLocks = new ConcurrentHashMap<>();
 
+    /**
+     * 不同server地址channl池key值
+     */
     private final ConcurrentMap<String, NettyPoolKey> poolKeyMap = new ConcurrentHashMap<>();
 
+    /**
+     * 所有server地址channel
+     */
     private final ConcurrentMap<String, Channel> channels = new ConcurrentHashMap<>();
 
+    /**
+     * channel创建池
+     */
     private final GenericKeyedObjectPool<NettyPoolKey, Channel> nettyClientKeyPool;
 
+    /**
+     * channel对象key创建函数
+     */
     private Function<String, NettyPoolKey> poolKeyFunction;
 
     NettyClientChannelManager(final NettyPoolableFactory keyPoolableFactory, final Function<String, NettyPoolKey> poolKeyFunction,
-                                     final NettyClientConfig clientConfig) {
+                              final NettyClientConfig clientConfig) {
         nettyClientKeyPool = new GenericKeyedObjectPool<>(keyPoolableFactory);
         nettyClientKeyPool.setConfig(getNettyPoolConfig(clientConfig));
         this.poolKeyFunction = poolKeyFunction;
@@ -91,6 +102,7 @@ class NettyClientChannelManager {
     }
 
     /**
+     * 获取一个目标server可用channel
      * Acquire netty client channel connected to remote server.
      *
      * @param serverAddress server address
@@ -114,13 +126,16 @@ class NettyClientChannelManager {
     }
 
     /**
+     * 释放指定channel
      * Release channel to pool if necessary.
      *
-     * @param channel channel
+     * @param channel       channel
      * @param serverAddress server address
      */
     void releaseChannel(Channel channel, String serverAddress) {
-        if (channel == null || serverAddress == null) { return; }
+        if (channel == null || serverAddress == null) {
+            return;
+        }
         try {
             synchronized (channelLocks.get(serverAddress)) {
                 Channel ch = channels.get(serverAddress);
@@ -146,10 +161,12 @@ class NettyClientChannelManager {
      * Destroy channel.
      *
      * @param serverAddress server address
-     * @param channel channel
+     * @param channel       channel
      */
     void destroyChannel(String serverAddress, Channel channel) {
-        if (channel == null) { return; }
+        if (channel == null) {
+            return;
+        }
         try {
             if (channel.equals(channels.get(serverAddress))) {
                 channels.remove(serverAddress);
@@ -161,6 +178,7 @@ class NettyClientChannelManager {
     }
 
     /**
+     * 重新连接【确保连接可用】
      * Reconnect to remote server of current transaction service group.
      *
      * @param transactionServiceGroup transaction service group
@@ -197,7 +215,7 @@ class NettyClientChannelManager {
                     channelAddress.add(serverAddress);
                 } catch (Exception e) {
                     LOGGER.error("{} can not connect to {} cause:{}", FrameworkErrorCode.NetConnect.getErrCode(),
-                        serverAddress, e.getMessage(), e);
+                            serverAddress, e.getMessage(), e);
                 }
             }
         } finally {
@@ -226,6 +244,9 @@ class NettyClientChannelManager {
         channels.put(serverAddress, channel);
     }
 
+    /**
+     * 建立连接
+     */
     private Channel doConnect(String serverAddress) {
         Channel channelToServer = channels.get(serverAddress);
         if (channelToServer != null && channelToServer.isActive()) {
@@ -252,6 +273,9 @@ class NettyClientChannelManager {
         return channelFromPool;
     }
 
+    /**
+     * 从注册表中获取指定事务组可用server列表
+     */
     private List<String> getAvailServerList(String transactionServiceGroup) throws Exception {
         List<InetSocketAddress> availInetSocketAddressList = RegistryFactory.getInstance()
                 .lookup(transactionServiceGroup);
@@ -264,6 +288,9 @@ class NettyClientChannelManager {
                 .collect(Collectors.toList());
     }
 
+    /**
+     * 获取已存在的活跃channel【目标channel活跃直接返回、否者等待一定活跃检查时间后释放目标channel】
+     */
     private Channel getExistAliveChannel(Channel rmChannel, String serverAddress) {
         if (rmChannel.isActive()) {
             return rmChannel;

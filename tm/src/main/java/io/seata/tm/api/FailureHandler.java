@@ -16,6 +16,7 @@
 package io.seata.tm.api;
 
 /**
+ * 失败回调接口
  * Callback on failure.
  *
  * @author slievrly

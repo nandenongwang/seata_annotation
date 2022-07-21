@@ -23,6 +23,7 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
+ * 压缩器工厂
  * the type compressor factory
  * @author jsbxyyx
  */

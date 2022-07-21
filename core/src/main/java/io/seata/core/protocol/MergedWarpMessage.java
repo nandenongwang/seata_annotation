@@ -20,6 +20,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
+ * 批量消息包装
  * The type Merged warp message.
  *
  * @author slievrly

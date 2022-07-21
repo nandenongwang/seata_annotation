@@ -15,12 +15,15 @@
  */
 package io.seata.tm.api.transaction;
 
+import io.seata.common.util.CollectionUtils;
+
 import java.io.Serializable;
 import java.util.Set;
 
-import io.seata.common.util.CollectionUtils;
-
 /**
+ * 全局事务元信息
+ * 用于封装@GlobalTransactional注解配置
+ *
  * @author guoyao
  */
 public final class TransactionInfo implements Serializable {

@@ -18,6 +18,7 @@ package io.seata.tm.api;
 import io.seata.tm.api.transaction.TransactionInfo;
 
 /**
+ * 封装全局事务业务代码块与事务配置
  * Callback for executing business logic in a global transaction.
  *
  * @author sharajava
@@ -34,6 +35,7 @@ public interface TransactionalExecutor {
 
     /**
      * transaction conf or other attr
+     *
      * @return transaction info
      */
     TransactionInfo getTransactionInfo();

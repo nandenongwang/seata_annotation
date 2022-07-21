@@ -35,6 +35,10 @@ import org.slf4j.LoggerFactory;
 import java.util.concurrent.TimeoutException;
 
 /**
+ * 资源管理器
+ * 向server注册并汇报分支事务、并委托不同类型子类提交、回滚分支事务、查询全局锁等
+ * 如AT模式下DataSourceManager:
+ * 提交即删除对应undolog、回滚即应用对应undolog、查询全局锁即向server查询
  * abstract ResourceManager
  *
  * @author zhangsen
@@ -84,7 +88,7 @@ public abstract class AbstractResourceManager implements ResourceManager {
      * @param branchId        the branch id
      * @param status          the status
      * @param applicationData the application data
-     * @throws TransactionException  TransactionException
+     * @throws TransactionException TransactionException
      */
     @Override
     public void branchReport(BranchType branchType, String xid, long branchId, BranchStatus status, String applicationData) throws TransactionException {

@@ -16,6 +16,7 @@
 package io.seata.core.constants;
 
 /**
+ * undo表各个字段名
  * client table columns name.
  *
  * @author zjinlei

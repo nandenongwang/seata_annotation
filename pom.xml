@@ -63,6 +63,7 @@
         <module>saga</module>
         <module>sqlparser</module>
         <module>server</module>
+        <module>server-api</module>
         <module>ext/apm-seata-skywalking-plugin</module>
         <!--<module>seata-plugin</module>-->
     </modules>

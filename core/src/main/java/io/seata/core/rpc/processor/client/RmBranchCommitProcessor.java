@@ -26,6 +26,8 @@ import io.seata.core.rpc.processor.RemotingProcessor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.util.Random;
+
 /**
  * process TC global commit command.
  * <p>
@@ -60,6 +62,12 @@ public class RmBranchCommitProcessor implements RemotingProcessor {
 
     private void handleBranchCommit(RpcMessage request, String serverAddress, BranchCommitRequest branchCommitRequest) {
         BranchCommitResponse resultMessage;
+
+        if (new Random().nextInt(10) > 5) {
+            System.out.println("模拟分支提交异常");
+            throw new RuntimeException("模拟分支提交异常");
+        }
+
         resultMessage = (BranchCommitResponse) handler.onRequest(branchCommitRequest, null);
         if (LOGGER.isDebugEnabled()) {
             LOGGER.debug("branch commit result:" + resultMessage);

@@ -16,6 +16,7 @@
 package io.seata.core.protocol;
 
 /**
+ * 批量消息接口
  * The interface Merge message.
  *
  * @author slievrly

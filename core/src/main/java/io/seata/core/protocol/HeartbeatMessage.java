@@ -18,6 +18,7 @@ package io.seata.core.protocol;
 import java.io.Serializable;
 
 /**
+ * 心跳消息
  * The type Heartbeat message.
  *
  * @author slievrly

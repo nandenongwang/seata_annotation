@@ -23,6 +23,7 @@ import org.apache.commons.lang.StringUtils;
 import static io.seata.core.constants.ConfigurationKeys.EXTRA_DATA_SPLIT_CHAR;
 
 /**
+ * 注册事务管理器请求
  * The type Register tm request.
  *
  * @author slievrly

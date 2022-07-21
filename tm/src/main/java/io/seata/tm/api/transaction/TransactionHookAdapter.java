@@ -16,6 +16,7 @@
 package io.seata.tm.api.transaction;
 
 /**
+ * 全局事务生命周期钩子默认实现
  * @author guoyao
  */
 public class TransactionHookAdapter implements TransactionHook {

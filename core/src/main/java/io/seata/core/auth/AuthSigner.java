@@ -16,6 +16,8 @@
 package io.seata.core.auth;
 
 /**
+ * 签名器
+ * 事务管理器注册请求会携带签名信息
  * @author slievrly
  */
 public interface AuthSigner {

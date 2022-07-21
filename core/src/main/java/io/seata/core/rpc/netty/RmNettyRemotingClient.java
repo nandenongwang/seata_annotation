@@ -31,11 +31,7 @@ import io.seata.core.protocol.MessageType;
 import io.seata.core.protocol.RegisterRMRequest;
 import io.seata.core.protocol.RegisterRMResponse;
 import io.seata.core.rpc.netty.NettyPoolKey.TransactionRole;
-import io.seata.core.rpc.processor.client.ClientHeartbeatProcessor;
-import io.seata.core.rpc.processor.client.ClientOnResponseProcessor;
-import io.seata.core.rpc.processor.client.RmBranchCommitProcessor;
-import io.seata.core.rpc.processor.client.RmBranchRollbackProcessor;
-import io.seata.core.rpc.processor.client.RmUndoLogProcessor;
+import io.seata.core.rpc.processor.client.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -50,6 +46,8 @@ import java.util.function.Function;
 import static io.seata.common.Constants.DBKEYS_SPLIT_CHAR;
 
 /**
+ * 事务管理器RPC客户端
+ * 注册相关处理器、实例化、注册指令回调等
  * The Rm netty client.
  *
  * @author slievrly
@@ -114,10 +112,10 @@ public final class RmNettyRemotingClient extends AbstractNettyRemotingClient {
                 if (instance == null) {
                     NettyClientConfig nettyClientConfig = new NettyClientConfig();
                     final ThreadPoolExecutor messageExecutor = new ThreadPoolExecutor(
-                        nettyClientConfig.getClientWorkerThreads(), nettyClientConfig.getClientWorkerThreads(),
-                        KEEP_ALIVE_TIME, TimeUnit.SECONDS, new LinkedBlockingQueue<>(MAX_QUEUE_SIZE),
-                        new NamedThreadFactory(nettyClientConfig.getRmDispatchThreadPrefix(),
-                            nettyClientConfig.getClientWorkerThreads()), new ThreadPoolExecutor.CallerRunsPolicy());
+                            nettyClientConfig.getClientWorkerThreads(), nettyClientConfig.getClientWorkerThreads(),
+                            KEEP_ALIVE_TIME, TimeUnit.SECONDS, new LinkedBlockingQueue<>(MAX_QUEUE_SIZE),
+                            new NamedThreadFactory(nettyClientConfig.getRmDispatchThreadPrefix(),
+                                    nettyClientConfig.getClientWorkerThreads()), new ThreadPoolExecutor.CallerRunsPolicy());
                     instance = new RmNettyRemotingClient(nettyClientConfig, null, messageExecutor);
                 }
             }
@@ -155,8 +153,8 @@ public final class RmNettyRemotingClient extends AbstractNettyRemotingClient {
     @Override
     public void onRegisterMsgSuccess(String serverAddress, Channel channel, Object response,
                                      AbstractMessage requestMessage) {
-        RegisterRMRequest registerRMRequest = (RegisterRMRequest)requestMessage;
-        RegisterRMResponse registerRMResponse = (RegisterRMResponse)response;
+        RegisterRMRequest registerRMRequest = (RegisterRMRequest) requestMessage;
+        RegisterRMResponse registerRMResponse = (RegisterRMResponse) response;
         if (LOGGER.isInfoEnabled()) {
             LOGGER.info("register RM success. client version:{}, server version:{},channel:{}", registerRMRequest.getVersion(), registerRMResponse.getVersion(), channel);
         }
@@ -173,10 +171,10 @@ public final class RmNettyRemotingClient extends AbstractNettyRemotingClient {
     @Override
     public void onRegisterMsgFail(String serverAddress, Channel channel, Object response,
                                   AbstractMessage requestMessage) {
-        RegisterRMRequest registerRMRequest = (RegisterRMRequest)requestMessage;
-        RegisterRMResponse registerRMResponse = (RegisterRMResponse)response;
+        RegisterRMRequest registerRMRequest = (RegisterRMRequest) requestMessage;
+        RegisterRMResponse registerRMResponse = (RegisterRMResponse) response;
         String errMsg = String.format(
-            "register RM failed. client version: %s,server version: %s, errorMsg: %s, " + "channel: %s", registerRMRequest.getVersion(), registerRMResponse.getVersion(), registerRMResponse.getMsg(), channel);
+                "register RM failed. client version: %s,server version: %s, errorMsg: %s, " + "channel: %s", registerRMRequest.getVersion(), registerRMResponse.getVersion(), registerRMResponse.getMsg(), channel);
         throw new FrameworkException(errMsg);
     }
 
@@ -281,7 +279,7 @@ public final class RmNettyRemotingClient extends AbstractNettyRemotingClient {
         // If the old configuration exists, use the old configuration
         // RM client Turns on batch sending by default
         return ConfigurationFactory.getInstance().getBoolean(ConfigurationKeys.ENABLE_CLIENT_BATCH_SEND_REQUEST,
-            DefaultValues.DEFAULT_ENABLE_RM_CLIENT_BATCH_SEND_REQUEST);
+                DefaultValues.DEFAULT_ENABLE_RM_CLIENT_BATCH_SEND_REQUEST);
     }
 
     @Override
@@ -301,7 +299,7 @@ public final class RmNettyRemotingClient extends AbstractNettyRemotingClient {
         super.registerProcessor(MessageType.TYPE_RM_DELETE_UNDOLOG, rmUndoLogProcessor, messageExecutor);
         // 4.registry TC response processor
         ClientOnResponseProcessor onResponseProcessor =
-            new ClientOnResponseProcessor(mergeMsgMap, super.getFutures(), getTransactionMessageHandler());
+                new ClientOnResponseProcessor(mergeMsgMap, super.getFutures(), getTransactionMessageHandler());
         super.registerProcessor(MessageType.TYPE_SEATA_MERGE_RESULT, onResponseProcessor, null);
         super.registerProcessor(MessageType.TYPE_BRANCH_REGISTER_RESULT, onResponseProcessor, null);
         super.registerProcessor(MessageType.TYPE_BRANCH_STATUS_REPORT_RESULT, onResponseProcessor, null);
